@@ -91,7 +91,7 @@
             <!-- 删除按钮 -->
             <button class="calc-btn bg-gray-800 text-white hover:bg-gray-700" id="btn-delete">
                 <span class="flex items-center justify-center">
-                    <i class="fa fa-backspace"></i>
+                    <i class="fa fa-backspace mr-2"></i>删除
                 </span>
             </button>
             
@@ -149,7 +149,7 @@
             <!-- 正负号按钮 -->
             <button class="calc-btn bg-gray-800 text-white hover:bg-gray-700" id="btn-sign">
                 <span class="flex items-center justify-center">
-                    <i class="fa fa-plus-minus"></i>
+                    <i class="fa fa-plus-minus mr-2"></i>正负号
                 </span>
             </button>
             
@@ -420,6 +420,12 @@
                     break;
                 case '.':
                     speech.text = '点';
+                    break;
+                case '删除':
+                    speech.text = '删除';
+                    break;
+                case '正负号':
+                    speech.text = '正负号';
                     break;
                 default:
                     speech.text = buttonText;
@@ -702,6 +708,10 @@
                     case 'Backspace':
                         event.preventDefault();
                         document.getElementById('btn-delete').click();
+                        break;
+                    case 'F9':  // 正负号快捷键
+                        event.preventDefault();
+                        document.getElementById('btn-sign').click();
                         break;
                 }
             });
