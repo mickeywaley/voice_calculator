@@ -60,6 +60,9 @@
             .display {
                 @apply h-20 w-full bg-gray-900 text-white rounded-lg p-4 text-right text-3xl font-semibold overflow-x-auto;
             }
+            .expression {
+                @apply h-10 w-full bg-gray-800/50 text-gray-400 rounded-t-lg p-2 text-right text-sm overflow-x-auto;
+            }
             .history-item {
                 @apply py-2 px-4 border-b border-gray-700 hover:bg-gray-800/50 transition-colors;
             }
@@ -81,6 +84,7 @@
         
         <!-- 显示区域 -->
         <div class="p-4">
+            <div class="expression" id="calculator-expression"></div>
             <div class="display" id="calculator-display">0</div>
             <div class="h-24 overflow-y-auto bg-gray-800/30 rounded-lg mt-2 p-2 text-sm text-gray-400" id="calculator-history">
                 <p class="text-gray-500 italic">计算历史将显示在这里</p>
@@ -199,11 +203,13 @@
             waitingForSecondOperand: false,
             operator: null,
             history: [],
-            voiceEnabled: true  // 新增语音开关状态
+            voiceEnabled: true,
+            expression: ''  // 新增运算表达式
         };
         
         // DOM元素
         const display = document.getElementById('calculator-display');
+        const expressionDisplay = document.getElementById('calculator-expression');
         const historyElement = document.getElementById('calculator-history');
         const speechButton = document.getElementById('btn-speech');
         const voiceToggle = document.getElementById('voice-toggle');
@@ -222,6 +228,19 @@
             }
             
             display.textContent = displayValue;
+            updateExpressionDisplay();
+        }
+        
+        // 更新表达式显示
+        function updateExpressionDisplay() {
+            let expression = calculator.expression;
+            
+            // 如果正在等待第二个操作数，显示操作符
+            if (calculator.waitingForSecondOperand && calculator.operator) {
+                expression += ` ${getOperatorSymbol(calculator.operator)} `;
+            }
+            
+            expressionDisplay.textContent = expression;
         }
         
         // 更新历史记录
@@ -253,9 +272,26 @@
             if (waitingForSecondOperand) {
                 calculator.displayValue = digit;
                 calculator.waitingForSecondOperand = false;
+                
+                // 如果是开始输入第二个操作数，更新表达式
+                if (calculator.firstOperand !== null && calculator.operator) {
+                    calculator.expression += ` ${getOperatorSymbol(calculator.operator)} ${digit}`;
+                } else {
+                    calculator.expression = digit;
+                }
             } else {
                 // 如果当前显示为0，则替换为新数字，否则追加
                 calculator.displayValue = displayValue === '0' ? digit : displayValue + digit;
+                
+                // 更新表达式
+                if (calculator.expression === '' || calculator.expression === '0') {
+                    calculator.expression = digit;
+                } else if (calculator.waitingForSecondOperand) {
+                    calculator.expression = digit;
+                    calculator.waitingForSecondOperand = false;
+                } else {
+                    calculator.expression += digit;
+                }
             }
             
             updateDisplay();
@@ -267,9 +303,17 @@
             if (calculator.waitingForSecondOperand) {
                 calculator.displayValue = '0.';
                 calculator.waitingForSecondOperand = false;
+                calculator.expression += ` ${getOperatorSymbol(calculator.operator)} 0.`;
             } else if (!calculator.displayValue.includes('.')) {
                 // 只有当当前值不包含小数点时才添加
                 calculator.displayValue += '.';
+                
+                // 更新表达式
+                if (calculator.expression === '') {
+                    calculator.expression = '0.';
+                } else {
+                    calculator.expression += '.';
+                }
             }
             
             updateDisplay();
@@ -283,6 +327,13 @@
             
             // 如果已经有一个运算符，并且正在等待第二个操作数，则更新运算符
             if (operator && calculator.waitingForSecondOperand) {
+                // 更新表达式中的运算符
+                const parts = calculator.expression.split(' ');
+                if (parts.length >= 3) {
+                    parts[parts.length - 2] = getOperatorSymbol(nextOperator);
+                    calculator.expression = parts.join(' ');
+                }
+                
                 calculator.operator = nextOperator;
                 updateDisplay();
                 speakButtonClick(getOperatorSymbol(nextOperator));
@@ -300,6 +351,9 @@
                 
                 // 添加到历史记录
                 addToHistory(`${formatNumber(firstOperand)} ${getOperatorSymbol(operator)} ${formatNumber(inputValue)}`, formatNumber(result));
+                
+                // 更新表达式
+                calculator.expression = String(result);
             }
             
             calculator.waitingForSecondOperand = true;
@@ -339,10 +393,10 @@
         // 获取运算符符号
         function getOperatorSymbol(operator) {
             switch (operator) {
-                case '+': return '加';
-                case '-': return '减';
-                case '*': return '乘';
-                case '/': return '除';
+                case '+': return '+';
+                case '-': return '−';
+                case '*': return '×';
+                case '/': return '÷';
                 default: return '';
             }
         }
@@ -353,6 +407,7 @@
             calculator.firstOperand = null;
             calculator.waitingForSecondOperand = false;
             calculator.operator = null;
+            calculator.expression = '';
             
             updateDisplay();
             speakButtonClick('清除');
@@ -476,9 +531,11 @@
                     // 如果是第一个数字且当前显示为0，则直接替换
                     if (index === 0 && calculator.displayValue === '0') {
                         calculator.displayValue = number;
+                        calculator.expression = number;
                     } else {
                         // 否则追加
                         calculator.displayValue += number;
+                        calculator.expression += number;
                     }
                     
                     updateDisplay();
@@ -496,6 +553,7 @@
             // 处理小数点
             if (decimalMatch && !calculator.displayValue.includes('.')) {
                 calculator.displayValue += '.';
+                calculator.expression += '.';
                 updateDisplay();
             }
             
@@ -504,6 +562,7 @@
                 const inputValue = parseFloat(calculator.displayValue);
                 const result = calculate(calculator.firstOperand, inputValue, calculator.operator);
                 calculator.displayValue = String(result);
+                calculator.expression = `${calculator.expression} = ${result}`;
                 
                 // 添加到历史记录
                 addToHistory(`${formatNumber(calculator.firstOperand)} ${getOperatorSymbol(calculator.operator)} ${formatNumber(inputValue)}`, formatNumber(result));
@@ -633,6 +692,7 @@
                     const inputValue = parseFloat(calculator.displayValue);
                     const result = calculate(calculator.firstOperand, inputValue, calculator.operator);
                     calculator.displayValue = String(result);
+                    calculator.expression += ` = ${result}`;
                     
                     // 添加到历史记录
                     addToHistory(`${formatNumber(calculator.firstOperand)} ${getOperatorSymbol(calculator.operator)} ${formatNumber(inputValue)}`, formatNumber(result));
@@ -650,8 +710,13 @@
             document.getElementById('btn-delete').addEventListener('click', () => {
                 if (calculator.displayValue.length > 1) {
                     calculator.displayValue = calculator.displayValue.slice(0, -1);
+                    calculator.expression = calculator.expression.slice(0, -1);
                 } else {
                     calculator.displayValue = '0';
+                    calculator.expression = calculator.expression.slice(0, -1);
+                    if (calculator.expression === '') {
+                        calculator.expression = '0';
+                    }
                 }
                 
                 updateDisplay();
@@ -662,6 +727,14 @@
             document.getElementById('btn-sign').addEventListener('click', () => {
                 const value = parseFloat(calculator.displayValue);
                 calculator.displayValue = String(-value);
+                
+                // 更新表达式
+                if (calculator.expression.startsWith('-')) {
+                    calculator.expression = calculator.expression.substring(1);
+                } else {
+                    calculator.expression = '-' + calculator.expression;
+                }
+                
                 updateDisplay();
                 speakButtonClick('正负号');
             });
