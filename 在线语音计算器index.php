@@ -196,6 +196,10 @@
     </div>
     
     <script>
+        // 语音合成队列
+        const speechQueue = [];
+        let isSpeaking = false;
+        
         // 计算器状态
         const calculator = {
             displayValue: '0',
@@ -435,73 +439,64 @@
         function speakResult(result) {
             if (!calculator.voiceEnabled || !('speechSynthesis' in window)) return;
             
-            const speech = new SpeechSynthesisUtterance();
-            speech.lang = 'zh-CN';
+            const text = result === 'Error' 
+                ? '错误：除数不能为零' 
+                : `计算结果是${formatNumber(result).replace(/,/g, '千').replace('.', '点')}`;
             
-            // 处理特殊结果
-            if (result === 'Error') {
-                speech.text = '错误：除数不能为零';
-            } else {
-                // 格式化数字并转换为语音友好格式
-                const formattedResult = formatNumber(result);
-                const resultText = formattedResult
-                    .replace(/,/g, '千')  // 简化中文播报，实际应用中可能需要更复杂的转换
-                    .replace('.', '点');
-                
-                speech.text = `计算结果是${resultText}`;
-            }
-            
-            speech.volume = 1;
-            speech.rate = 1;
-            speech.pitch = 1;
-            
-            window.speechSynthesis.speak(speech);
+            enqueueSpeech(text);
         }
         
         // 按钮点击语音反馈
         function speakButtonClick(buttonText) {
             if (!calculator.voiceEnabled || !('speechSynthesis' in window)) return;
             
-            // 创建语音实例
-            const speech = new SpeechSynthesisUtterance();
-            speech.lang = 'zh-CN';
-            
-            // 根据按钮文本设置语音内容
+            let text;
             switch (buttonText) {
-                case '+':
-                    speech.text = '加';
-                    break;
-                case '−':
-                    speech.text = '减';
-                    break;
-                case '×':
-                    speech.text = '乘';
-                    break;
-                case '÷':
-                    speech.text = '除';
-                    break;
-                case '=':
-                    speech.text = '等于';
-                    break;
-                case '.':
-                    speech.text = '点';
-                    break;
-                case '删除':
-                    speech.text = '删除';
-                    break;
-                case '正负号':
-                    speech.text = '正负号';
-                    break;
-                default:
-                    speech.text = buttonText;
+                case '+': text = '加'; break;
+                case '−': text = '减'; break;
+                case '×': text = '乘'; break;
+                case '÷': text = '除'; break;
+                case '=': text = '等于'; break;
+                case '.': text = '点'; break;
+                case '删除': text = '删除'; break;
+                case '正负号': text = '正负号'; break;
+                default: text = buttonText;
             }
             
-            // 设置语音参数
+            enqueueSpeech(text);
+        }
+        
+        // 将语音添加到队列
+        function enqueueSpeech(text) {
+            speechQueue.push(text);
+            processSpeechQueue();
+        }
+        
+        // 处理语音队列
+        function processSpeechQueue() {
+            if (isSpeaking || speechQueue.length === 0) return;
+            
+            const text = speechQueue.shift();
+            isSpeaking = true;
+            
+            const speech = new SpeechSynthesisUtterance();
+            speech.lang = 'zh-CN';
+            speech.text = text;
             speech.volume = 1;
-            speech.rate = 1.2;
+            speech.rate = 1.3;  // 加快语速
             speech.pitch = 1;
             
-            // 播放语音
+            speech.onend = () => {
+                isSpeaking = false;
+                processSpeechQueue();
+            };
+            
+            speech.onerror = (event) => {
+                console.error('语音播报错误:', event.error);
+                isSpeaking = false;
+                processSpeechQueue();
+            };
+            
             window.speechSynthesis.speak(speech);
         }
         
