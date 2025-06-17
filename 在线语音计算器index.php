@@ -51,6 +51,12 @@
             .calc-btn-speech {
                 @apply bg-accent text-white hover:bg-accent/80;
             }
+            .calc-btn-toggle {
+                @apply bg-gray-700 text-white hover:bg-gray-600;
+            }
+            .calc-btn-toggle-active {
+                @apply bg-green-600 text-white hover:bg-green-500;
+            }
             .display {
                 @apply h-20 w-full bg-gray-900 text-white rounded-lg p-4 text-right text-3xl font-semibold overflow-x-auto;
             }
@@ -66,9 +72,11 @@
 <body class="bg-gradient-to-br from-dark to-gray-900 min-h-screen font-inter text-light flex items-center justify-center p-4">
     <div class="max-w-md w-full mx-auto bg-gray-900/80 backdrop-blur-md rounded-2xl shadow-2xl overflow-hidden border border-gray-800">
         <!-- 计算器头部 -->
-        <div class="p-4 bg-gray-800/50 border-b border-gray-700">
-            <h1 class="text-xl font-bold text-center">智能语音计算器</h1>
-            <p class="text-sm text-gray-400 text-center mt-1">支持语音输入和结果播报</p>
+        <div class="p-4 bg-gray-800/50 border-b border-gray-700 flex justify-between items-center">
+            <h1 class="text-xl font-bold">智能语音计算器</h1>
+            <button id="voice-toggle" class="calc-btn-toggle calc-btn-toggle-active p-2 rounded-lg transition-all duration-200">
+                <i class="fa fa-volume-up"></i>
+            </button>
         </div>
         
         <!-- 显示区域 -->
@@ -190,13 +198,15 @@
             firstOperand: null,
             waitingForSecondOperand: false,
             operator: null,
-            history: []
+            history: [],
+            voiceEnabled: true  // 新增语音开关状态
         };
         
         // DOM元素
         const display = document.getElementById('calculator-display');
         const historyElement = document.getElementById('calculator-history');
         const speechButton = document.getElementById('btn-speech');
+        const voiceToggle = document.getElementById('voice-toggle');
         
         // 更新显示
         function updateDisplay() {
@@ -368,7 +378,7 @@
         
         // 语音播报结果
         function speakResult(result) {
-            if (!('speechSynthesis' in window)) return;
+            if (!calculator.voiceEnabled || !('speechSynthesis' in window)) return;
             
             const speech = new SpeechSynthesisUtterance();
             speech.lang = 'zh-CN';
@@ -395,7 +405,7 @@
         
         // 按钮点击语音反馈
         function speakButtonClick(buttonText) {
-            if (!('speechSynthesis' in window)) return;
+            if (!calculator.voiceEnabled || !('speechSynthesis' in window)) return;
             
             // 创建语音实例
             const speech = new SpeechSynthesisUtterance();
@@ -525,6 +535,22 @@
             }
         }
         
+        // 切换语音开关
+        function toggleVoice() {
+            calculator.voiceEnabled = !calculator.voiceEnabled;
+            
+            if (calculator.voiceEnabled) {
+                voiceToggle.classList.remove('calc-btn-toggle');
+                voiceToggle.classList.add('calc-btn-toggle-active');
+                voiceToggle.innerHTML = '<i class="fa fa-volume-up"></i>';
+                speakButtonClick('语音开启');
+            } else {
+                voiceToggle.classList.remove('calc-btn-toggle-active');
+                voiceToggle.classList.add('calc-btn-toggle');
+                voiceToggle.innerHTML = '<i class="fa fa-volume-off"></i>';
+            }
+        }
+        
         // 设置语音识别
         function setupSpeechRecognition() {
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -640,6 +666,9 @@
                 speakButtonClick('正负号');
             });
             
+            // 语音开关按钮
+            voiceToggle.addEventListener('click', toggleVoice);
+            
             // 添加按钮点击动画
             const allButtons = document.querySelectorAll('.calc-btn');
             allButtons.forEach(button => {
@@ -712,6 +741,10 @@
                     case 'F9':  // 正负号快捷键
                         event.preventDefault();
                         document.getElementById('btn-sign').click();
+                        break;
+                    case 'F10': // 语音开关快捷键
+                        event.preventDefault();
+                        toggleVoice();
                         break;
                 }
             });
