@@ -204,7 +204,7 @@
             operator: null,
             history: [],
             voiceEnabled: true,
-            expression: ''  // 新增运算表达式
+            expression: ''
         };
         
         // DOM元素
@@ -516,81 +516,88 @@
                 return;
             }
             
-            // 处理数字和运算符
-            const numberMatch = command.match(/\d+(\.\d+)?/g);
-            const operatorMatch = command.match(/[加|减|乘|除|plus|minus|multiply|divide]/);
-            const equalMatch = command.match(/等于|等于|计算结果/);
-            const decimalMatch = command.match(/点/);
+            // 处理运算符命令
+            const operators = [
+                { text: '加', symbol: '+' },
+                { text: '减', symbol: '-' },
+                { text: '乘', symbol: '*' },
+                { text: '除', symbol: '/' },
+                { text: 'plus', symbol: '+' },
+                { text: 'minus', symbol: '-' },
+                { text: 'multiply', symbol: '*' },
+                { text: 'divide', symbol: '/' }
+            ];
             
-            // 如果包含小数点但没有数字，忽略
-            if (decimalMatch && !numberMatch) return;
-            
-            // 处理数字
-            if (numberMatch) {
-                numberMatch.forEach((number, index) => {
-                    // 如果是第一个数字且当前显示为0，则直接替换
-                    if (index === 0 && calculator.displayValue === '0') {
-                        calculator.displayValue = number;
-                        calculator.expression = number;
-                    } else {
-                        // 否则追加
-                        calculator.displayValue += number;
-                        calculator.expression += number;
-                    }
+            // 检查是否包含运算符
+            let operatorFound = false;
+            operators.forEach(operator => {
+                if (command.includes(operator.text)) {
+                    operatorFound = true;
                     
-                    updateDisplay();
+                    // 分割命令为数字和运算符部分
+                    const parts = command.split(operator.text);
+                    const leftPart = parts[0].trim();
+                    const rightPart = parts[1].trim();
                     
-                    // 如果后面有运算符，处理运算符
-                    if (operatorMatch && index === numberMatch.length - 1) {
-                        const operator = getOperatorFromText(operatorMatch[0]);
-                        if (operator) {
-                            handleOperator(operator);
+                    // 处理左边的数字
+                    if (leftPart) {
+                        const numberMatch = leftPart.match(/\d+(\.\d+)?/);
+                        if (numberMatch) {
+                            const number = numberMatch[0];
+                            calculator.displayValue = number;
+                            calculator.expression = number;
+                            updateDisplay();
                         }
                     }
-                });
+                    
+                    // 处理运算符
+                    handleOperator(operator.symbol);
+                    
+                    // 处理右边的数字
+                    if (rightPart) {
+                        const numberMatch = rightPart.match(/\d+(\.\d+)?/);
+                        if (numberMatch) {
+                            const number = numberMatch[0];
+                            calculator.displayValue = number;
+                            calculator.expression += ` ${getOperatorSymbol(operator.symbol)} ${number}`;
+                            updateDisplay();
+                        }
+                    }
+                }
+            });
+            
+            // 如果找到运算符，不再处理其他命令
+            if (operatorFound) return;
+            
+            // 处理等于命令
+            if (command.includes('等于') || command.includes('计算结果')) {
+                if (calculator.firstOperand !== null && calculator.operator !== null) {
+                    document.getElementById('btn-equal').click();
+                }
+                return;
             }
             
-            // 处理小数点
-            if (decimalMatch && !calculator.displayValue.includes('.')) {
-                calculator.displayValue += '.';
-                calculator.expression += '.';
-                updateDisplay();
+            // 处理小数点命令
+            if (command.includes('点')) {
+                if (!calculator.displayValue.includes('.')) {
+                    inputDecimal();
+                }
+                return;
             }
             
-            // 处理等号
-            if (equalMatch && calculator.firstOperand !== null && calculator.operator !== null) {
-                const inputValue = parseFloat(calculator.displayValue);
-                const result = calculate(calculator.firstOperand, inputValue, calculator.operator);
-                calculator.displayValue = String(result);
-                calculator.expression = `${calculator.expression} = ${result}`;
-                
-                // 添加到历史记录
-                addToHistory(`${formatNumber(calculator.firstOperand)} ${getOperatorSymbol(calculator.operator)} ${formatNumber(inputValue)}`, formatNumber(result));
-                
-                calculator.firstOperand = result;
-                calculator.waitingForSecondOperand = true;
-                
+            // 处理数字命令
+            const numberMatch = command.match(/\d+(\.\d+)?/);
+            if (numberMatch) {
+                const number = numberMatch[0];
+                // 如果当前显示为0，则替换为新数字，否则追加
+                if (calculator.displayValue === '0') {
+                    calculator.displayValue = number;
+                    calculator.expression = number;
+                } else {
+                    calculator.displayValue += number;
+                    calculator.expression += number;
+                }
                 updateDisplay();
-            }
-        }
-        
-        // 从文本获取运算符
-        function getOperatorFromText(text) {
-            switch (text) {
-                case '加':
-                case 'plus':
-                    return '+';
-                case '减':
-                case 'minus':
-                    return '-';
-                case '乘':
-                case 'multiply':
-                    return '*';
-                case '除':
-                case 'divide':
-                    return '/';
-                default:
-                    return null;
             }
         }
         
