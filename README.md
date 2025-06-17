@@ -2,6 +2,10 @@
 
 语音计算器PC
 
+<img src="https://raw.githubusercontent.com/mickeywaley/voice_calculator/refs/heads/main/1.1.1-1.png"  />
+
+目前已知问题，语音播报有点慢
+
 ----------------------
 
 这个语音计算器是一个基于 Python 的图形界面应用程序，它不仅能够完成基本的数学计算功能，还能通过语音播报的方式反馈操作结果，非常适合视力障碍人士或需要双手忙碌时使用。
